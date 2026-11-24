@@ -1,0 +1,29 @@
+# Joins the APK pieces pushed to the "drop" branch and publishes them as one Release file.
+# Stable link: https://github.com/sirrenderstudios/tableland-builds/releases/latest/download/Tableland-test.apk
+name: Publish APK
+on:
+  push:
+    branches: [drop]
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { ref: drop }
+      - name: Join pieces and check
+        run: |
+          set -euo pipefail
+          cat apk/Tableland-test.apk.part* > Tableland-test.apk
+          sha256sum -c apk/Tableland-test.apk.sha256
+          ls -la Tableland-test.apk
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="v$(cat apk/VERSION)"
+          gh release delete "$TAG" --yes --cleanup-tag || true
+          gh release create "$TAG" Tableland-test.apk --title "Tableland $TAG (Android test)" \
+            --notes-file apk/NOTES.md --latest
